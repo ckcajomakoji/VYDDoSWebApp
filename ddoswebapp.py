@@ -40,25 +40,27 @@ model, scaler, selected_features = load_model()
 # -----------------------
 # Streamlit UI
 # -----------------------
-st.title("Victor Yusuf – DDoS Detection App")
+model, scaler, selected_features = download_and_load_model()
+st.title("Victor Yusuf DDoS Web App")
 st.write("Upload one or more CSV files for batch prediction.")
 
+# -----------------------
+# File uploader
+# -----------------------
 uploaded_files = st.file_uploader(
     "Upload CSV file(s)",
     type="csv",
     accept_multiple_files=True
 )
 
+
 # -----------------------
-# Prediction logic
+# Prediction function
 # -----------------------
 def predict_csv(df):
+    # Detect features if not provided
     cols = selected_features or df.select_dtypes(include="number").columns.tolist()
     X = df[cols].fillna(0)
-
-    if scaler is not None:
-        X = scaler.transform(X)
-
     preds = model.predict(X)
     df["prediction"] = preds
 
@@ -67,8 +69,9 @@ def predict_csv(df):
 
     return df
 
+
 # -----------------------
-# Processing
+# Process uploaded files
 # -----------------------
 if uploaded_files:
     results = []
@@ -87,28 +90,24 @@ if uploaded_files:
     if results:
         final_df = pd.concat(results, ignore_index=True)
         st.success("Prediction completed!")
+        st.dataframe(final_df.style.apply(
+            lambda x: ['background-color: red' if v > 0.8 else '' for v in x]
+            if x.name == "probability" else [''] * len(x), axis=0
+        ))
 
-        st.dataframe(
-            final_df.style.apply(
-                lambda x: [
-                    "background-color: red" if v > 0.8 else ""
-                    for v in x
-                ] if x.name == "probability" else ["" for _ in x],
-                axis=0
-            )
-        )
-
+        # Plot interactive bar chart with Plotly
         fig = px.bar(
             final_df,
             x="prediction",
             y="probability" if "probability" in final_df.columns else None,
             color="probability" if "probability" in final_df.columns else None,
             color_continuous_scale="Reds",
-            title="Prediction Probability Distribution",
+            title="Predicted Class Counts with Probability",
             hover_data=["source_file"]
         )
         st.plotly_chart(fig, use_container_width=True)
 
+        # Download button
         st.download_button(
             "Download results",
             final_df.to_csv(index=False).encode(),
