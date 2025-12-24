@@ -40,7 +40,6 @@ model, scaler, selected_features = load_model()
 # -----------------------
 # Streamlit UI
 # -----------------------
-model, scaler, selected_features = download_and_load_model()
 st.title("Victor Yusuf DDoS Web App")
 st.write("Upload one or more CSV files for batch prediction.")
 
